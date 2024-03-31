@@ -1,4 +1,4 @@
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension 
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import com.android.build.gradle.BaseExtension
 
 buildscript {
@@ -13,7 +13,8 @@ buildscript {
         classpath("com.android.tools.build:gradle:7.0.4")
         // Cloudstream gradle plugin which makes everything work and builds plugins
         classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.21")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+        classpath("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
     }
 }
 
@@ -36,7 +37,7 @@ subprojects {
 
     cloudstream {
         // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "user/repo")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/IndusAryan/Aryans-Cloudstream-Extensions") //will change this user repo gh link in future 
     }
 
     android {
@@ -64,20 +65,31 @@ subprojects {
     }
 
     dependencies {
+        val apkTasks = listOf("deployWithAdb", "build")
+        val useApk = gradle.startParameter.taskNames.any { taskName ->
+            apkTasks.any { apkTask ->
+                taskName.contains(apkTask, ignoreCase = true)
+            }
+        }
         val apk by configurations
         val implementation by configurations
 
         // Stubs for all Cloudstream classes
-        apk("com.lagradost:cloudstream3:pre-release")
-
-        // these dependencies can include any of those which are added by the app,
-        // but you dont need to include any of them if you dont need them
-        // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle
-        implementation(kotlin("stdlib")) // adds standard kotlin features
-        implementation("com.github.Blatzar:NiceHttp:0.4.4") // http library
-        implementation("org.jsoup:jsoup:1.16.2") // html parser
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0")
+        if (useApk) {
+            // Stubs for all Cloudstream classes
+            apk("com.lagradost:cloudstream3:pre-release")
+        } else {
+            // For running locally
+            implementation("com.github.Blatzar:CloudstreamApi:0.1.6")
+        }
+        implementation(kotlin("stdlib")) // adds standard kotlin
+        implementation("com.github.Blatzar:NiceHttp:0.4.11") // http library
+        implementation("org.jsoup:jsoup:1.17.2") // html parser
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
+        implementation("io.karn:khttp-android:0.1.2")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+        implementation("org.mozilla:rhino:1.7.14") //run JS
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
     }
 }
 
