@@ -32,13 +32,15 @@ import java.net.URI
 import java.net.URL
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.jsoup.helper.HttpConnection
 //import kotlinx.serialization.json.Jso
 import java.util.*
+import okhttp3.Interceptor
 
 
 class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers must be an intstance of MainAPI
     override var mainUrl = "https://animerulz.to"
-    override var name = "AnimeRulz"
+    override var name = "AnimeRulz Returns"
     override val supportedTypes = setOf(TvType.Anime)
 
     override var lang = "en"
@@ -47,12 +49,9 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
     override val hasMainPage = true
 
     override val mainPage = mainPageOf(
-//        "movies" to "Movies",
-//        "$mainUrl/trendinganime/" to "TeluguDub",
         "$mainUrl/telugudubbed/" to "TeluguDub",
         "$mainUrl/tamildubbed/" to "TamilDub",
         "$mainUrl/hindidubbed/" to "HindiDub",
-//        "$mainUrl/telugudubbed/" to "TeluguDub",
 
     )
 
@@ -60,15 +59,12 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
-//        Log.d("MyDoc", "${request.data}")
         val document = app.get(request.data).document
-//        val t = document.select("#main > div.container-tr > div > div > div.new-dubbed-animes > div > div:nth-child(2) > a")
         val home =
             document.select("#main > div.container-tr > div > div > div.new-dubbed-animes > div > div:nth-child(2) > a")
                 .mapNotNull {
                     it.toSearchResult()
                 }
-//        Log.d("MyDoc", "$t")
         return newHomePageResponse(request.name, home)
     }
 
@@ -142,43 +138,18 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
         val episodesToAdd = arrayListOf<Episode>()
         detailsJson.forEach { (k, value) ->
             Log.d("MyDoc","${value}")
-            episodesToAdd.add(newEpisode(value?.source?.subbed?.vidStreaming){
+//            episodesToAdd.add(newEpisode(value?.source?.subbed?.vidCloud){
+              episodesToAdd.add(newEpisode(value?.source?.otherLanguages?.multi?.getOrNull(0)?.link){
                 this.episode= k.toIntOrNull()
                 this.name = value.title
         })
         }
-//        Log.d("MyDoc","$dJson")
         val info = res?.data?.media
-//        dJson?.Details?.forEach{
-////                (key:String, value:Root) -> Log.d("MyDoc","Helllllllll!!!!!!")
-//            (key:String, value:Root) -> episodesToAdd.add(newEpisode(value.source.subbed.vidStreaming){
-//                this.episode= key.toIntOrNull()
-//                this.name = value.title
-//        })
-//
-//        }
-//        for (ep in 1..info?.episodes!!){
-//            episodesToAdd.add(newEpisode(url){
-//                this.episode= ep.toInt()
-//                this.name = "Episode-${ep}"
-//            })
-//        }
-//        val detailsJson = app.get("https://animerulz.to/solo-leveling-151807/Watch-Now/details.json").parsedSafe<LinkedHashMap<String,EpisodeInfo>>()
-//        Log.d("MyDoc","$detailsJson")
         return newAnimeLoadResponse(info?.title?.english ?: "No Title", url, TvType.Anime) {
             engName = info?.title?.english
             posterUrl = info?.coverImage?.large
-
-//            posterUrl = trackers?.coverImage?.extraLarge ?: trackers?.coverImage?.large ?: poster
-//            backgroundPosterUrl = trackers?.bannerImage ?: showData.banner
-//            rating = showData.averageScore?.times(100)
             tags = info?.genres
             plot = info?.description
-
-//            year = showData.airedStart?.year
-//            duration = showData.episodeDuration?.div(60_000)
-//            addTrailer(showData.prevideos.filter { it.isNotBlank() }
-//                .map { "https://www.youtube.com/watch?v=$it" })
             addEpisodes(DubStatus.Subbed, episodesToAdd)
 //            addEpisodes(DubStatus.Dubbed, episodes.second)
 //            addActors(characters)
@@ -198,30 +169,27 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
         callback: (ExtractorLink) -> Unit
     ): Boolean{
         Log.d("MyDoc",data)
-//        ExtractorLink("Gogo","Gogo",data,"",1080)
-
+        val txt = app.get(data).text
+        val m3u8 = Regex("file:\\s*\"(.*?m3u8.*?)\"").find(txt ?:"")?.groupValues?.getOrNull(1).toString()
+        Log.d("MyDoc",m3u8)
         val headrs = mapOf(
             "accept" to "*/*",
-            "accept-language" to "en-IN,en;q=0.9",
+            "accept-language" to "en-US,en;q=0.6",
             "origin" to "https://rubystm.com",
-//            "referer" to "https://rubystm.com/",
             "sec-ch-ua" to "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
             "sec-ch-ua-mobile" to "?1",
             "sec-ch-ua-platform" to "\"Android\"",
             "sec-fetch-dest" to "empty",
             "sec-fetch-mode" to "cors",
             "sec-fetch-site" to "cross-site",
-            "user-agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36"
+            "User-Agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
         )
-//        val url = "https://36x8fqcfqsv376o2c3bj.streamruby.net/hls2/03/00067/hwv8ub5tf8x8_,l,n,h,x,.urlset/master.m3u8?t=1xutwmPvAp6f0VlEx0G0Lfjwc6g6uY2YoebNeR4CFVQ&s=1711878002&e=43200&f=336933&srv=127.0.0.1"
-        val url = "https://36x8fqcfqsv376o2c3bj.streamruby.net/hls2/03/00067/hwv8ub5tf8x8_l/index-v1-a1.m3u8?t=1xutwmPvAp6f0VlEx0G0Lfjwc6g6uY2YoebNeR4CFVQ&s=1711878002&e=43200&f=336933&srv=127.0.0.1"
-        val resp = app.get(url, headers = headrs)
-        Log.d("MyDoc", resp.toString())
+          val url = "https://3uho6lzsf1c2o3i8oun9.streamruby.net/hls2/04/00076/k2n4k5y6ts7m_,l,n,h,.urlset/master.m3u8?t=OWD7MWZx8NLWxj3R9bqY3OwXbi7mYMhJzR5FF_84Kpw&s=1713523514&e=43200&f=380491&srv=127.0.0.1"
         callback.invoke(
             ExtractorLink(
-                source = "VidStream",
-                name = "VidStream",
-                url = "https://36x8fqcfqsv376o2c3bj.streamruby.net/hls2/03/00067/hwv8ub5tf8x8_,l,n,h,x,.urlset/master.m3u8?t=foTlH320p3_kuSMEUaRaRoFiPdNccv2splVR0UHEG0k&s=1711809605&e=43200&f=336933&srv=127.0.0.1",
+                source = this.name,
+                name = "RubyStream",
+                url = m3u8,
                 referer = "https://rubystm.com/",
                 quality = Qualities.Unknown.value,
                 isM3u8 = true,
@@ -231,6 +199,20 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
         return true
     }
 
+    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
+        return object : Interceptor {
+            override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
+                // Change user agent here
+                val request = chain.request().newBuilder()
+                                .removeHeader("User-Agent")
+                                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    .build()
+                val response = chain.proceed(request)
+
+                return response
+            }
+        }
+    }
     //JSON formatter for data fetched from anilistApi
     data class SyncTitle(
         @JsonProperty("romaji") val romaji: String? = null,
@@ -257,22 +239,12 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
         @JsonProperty("Media") val media: Media? = null,
     )
 
-//    data class DetailsSync(
-//        val Details: HashMap<String,Root> ? =null,
-//    )
-
-    //    data class SyncEpInfo(
-//        @JsonProperty("data") val data: LinkedHashMap<String,EpisodeInfo>? = null,
-//    )
-//    import com.fasterxml.jackson.annotation.JsonProperty
     @Serializable
     data class Root(
         val intro: Intro? =null,
         val outro: Outro? =null,
         val title: String? =null,
         val source: Source? = null,
-        val captions: List<Caption>? =null,
-        val isFiller: Boolean? =null,
         val downloadLink: DownloadLink? =null,
     )
     data class Intro(
@@ -283,17 +255,6 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
     data class SyncInfo(
         @JsonProperty("data") val data: Data? = null,
     )
-//
-//    data class EpStreams(
-//        @JsonProperty("Vid Streaming") val vidStreaming: String? = null,
-//    )
-//
-//    data class EpSources (
-//        @JsonProperty("SUBBED") val subbed:EpStreams ? = null,
-//    )
-//    data class EpisodeInfo(
-//        @JsonProperty("source") val source:EpSources ? = null,
-//    )
 
     data class Outro(
         val end: Long? =null,
@@ -317,10 +278,6 @@ class ExampleProvider(val plugin: TestPlugin) : MainAPI() { // all providers mus
     data class Subbed(
         @JsonProperty("Vid Cloud")
         val vidCloud: String? =null,
-        @JsonProperty("Vid Streaming")
-        val vidStreaming: String? =null,
-        @JsonProperty("Awesome Stream")
-        val awesomeStream: String? =null,
     )
 
     data class OtherLanguages(
